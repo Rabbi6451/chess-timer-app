@@ -1,0 +1,317 @@
+package com.example.chesstimer;
+import android.content.Intent;
+import android.graphics.Color;
+import android.media.AudioAttributes;
+import android.media.SoundPool;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.util.TypedValue;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.content.ContextCompat;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView timerTop;
+    private boolean gameStarted = false; // Track if the game has started
+    private Button stopButton;
+    private TextView timerBottom;
+    private TextView movesTextViewTop;
+    private TextView movesTextViewBottom;
+    private LinearLayout timerTopLayout;
+    private LinearLayout timerBottomLayout;
+    private Button setTimeButton;
+    private int secondsTop = 600; // Default 10 minutes in seconds
+    private int secondsBottom = 600; // Default 10 minutes in seconds
+    private int moveCountTop = 0;
+    private int moveCountBottom = 0;
+    private boolean runningTop = false;
+    private boolean runningBottom = false;
+    private Handler handler = new Handler();
+    private boolean isPaused = false; // Track pause state
+    private boolean lastActiveTop = false; // Track which timer was last active
+
+    private SoundPool soundPool;
+    private int touchSoundId;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
+            int selectedTime = data.getIntExtra("selectedTime", 600); // Default to 10 min
+
+            // Update timers
+            secondsTop = selectedTime;
+            secondsBottom = selectedTime;
+            isPaused = false;  // Reset pause state
+            gameStarted = false;
+            moveCountTop = 0;
+            moveCountBottom = 0;
+
+            updateTimerDisplay(timerTop, secondsTop);
+            updateTimerDisplay(timerBottom, secondsBottom);
+            movesTextViewTop.setText("Moves: 0");
+            movesTextViewBottom.setText("Moves: 0");
+
+            // Reset UI elements
+            runningTop = false;
+            runningBottom = false;
+            timerTopLayout.setBackgroundColor(Color.parseColor("#808080"));
+            timerBottomLayout.setBackgroundColor(Color.parseColor("#808080"));
+            timerTopLayout.setEnabled(true);
+            timerBottomLayout.setEnabled(true);
+
+            setGameplayRippleEffect(false); // Ensure the ripple effect resets
+        }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Make the app full screen
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        );
+
+        setContentView(R.layout.activity_main);
+
+        // Initialize SoundPool
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        soundPool = new SoundPool.Builder()
+                .setMaxStreams(1)
+                .setAudioAttributes(audioAttributes)
+                .build();
+
+        // Load the touch sound
+        touchSoundId = soundPool.load(this, R.raw.move, 1);
+
+        timerTop = findViewById(R.id.timerTop);
+        timerTop.setRotation(180);
+        timerBottom = findViewById(R.id.timerBottom);
+        movesTextViewTop = findViewById(R.id.movesTextViewTop);
+        movesTextViewBottom = findViewById(R.id.movesTextViewBottom);
+        timerTopLayout = findViewById(R.id.timerTopLayout);
+        timerBottomLayout = findViewById(R.id.timerBottomLayout);
+        setTimeButton = findViewById(R.id.setTimeButton);
+        stopButton = findViewById(R.id.stopButton); // Stop/Resume button
+
+        updateTimerDisplay(timerTop, secondsTop);
+        updateTimerDisplay(timerBottom, secondsBottom);
+        movesTextViewTop.setText("Moves: " + moveCountTop);
+        movesTextViewBottom.setText("Moves: " + moveCountBottom);
+
+        // Show keyboard when EditText is clicked
+        setTimeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, MainActivity2.class);
+                startActivityForResult(intent, 1);
+            }
+        });
+
+        // Set custom time
+        setTimeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, MainActivity2.class);
+                startActivityForResult(intent, 1); // Use requestCode 1
+            }
+        });
+
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleCurrentTimer(stopButton);
+            }
+        });
+
+        startTimers();
+    }
+    private void toggleCurrentTimer(Button stopButton) {
+        if (!gameStarted) {
+            return;
+        }
+
+        if (isPaused) {
+            if (lastActiveTop) {
+                runningTop = true;
+            } else {
+                runningBottom = true;
+            }
+            stopButton.setText("Stop");
+        } else {
+            if (runningTop) {
+                runningTop = false;
+                lastActiveTop = true;
+            } else if (runningBottom) {
+                runningBottom = false;
+                lastActiveTop = false;
+            }
+            stopButton.setText("Resume");
+        }
+        isPaused = !isPaused; // Toggle state
+    }
+
+    private void startTimers() {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (runningTop && secondsTop > 0) {
+                    secondsTop--;
+                    updateTimerDisplay(timerTop, secondsTop);
+                } else if (secondsTop == 0) {
+                    timerTopLayout.setBackgroundColor(Color.RED);
+                    runningTop = false;
+                    runningBottom = false;
+                    timerTopLayout.setEnabled(false);
+                    timerBottomLayout.setEnabled(false);
+                }
+
+                if (runningBottom && secondsBottom > 0) {
+                    secondsBottom--;
+                    updateTimerDisplay(timerBottom, secondsBottom);
+                } else if (secondsBottom == 0) {
+                    timerBottomLayout.setBackgroundColor(Color.RED);
+                    runningTop = false;
+                    runningBottom = false;
+                    timerTopLayout.setEnabled(false);
+                    timerBottomLayout.setEnabled(false);
+                }
+
+                handler.postDelayed(this, 1000);
+            }
+        });
+    }
+
+    private void updateTimerDisplay(TextView timerView, int seconds) {
+        int minutes = seconds / 60;
+        int secs = seconds % 60;
+        String time = String.format("%2d:%02d", minutes, secs);
+        timerView.setText(time);
+    }
+
+    private long lastClickTime = 0; // Track the time of the last click
+
+    public void onTimerClick(View view) {
+        // Debounce mechanism: Ignore clicks that occur within 300ms of the last click
+        if (SystemClock.elapsedRealtime() - lastClickTime < 300) {
+            return;
+        }
+        lastClickTime = SystemClock.elapsedRealtime();
+
+        // Play the touch sound
+        soundPool.play(touchSoundId, 1.0f, 1.0f, 0, 0, 1.0f);
+
+        // Vibrate when touched
+        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (vibrator != null) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE));
+            } else {
+                vibrator.vibrate(50);
+            }
+        }
+
+        if (!gameStarted) {
+            gameStarted = true;
+            setGameplayRippleEffect(true); // Enable light ripple effect
+        }
+
+        // Switch player timers and update colors
+        if (view.getId() == R.id.timerTopLayout) {
+            if (!runningBottom) {
+                runningBottom = true;
+                runningTop = false;
+                moveCountTop++;
+                movesTextViewTop.setText("Moves: " + moveCountTop);
+
+                timerTopLayout.setBackgroundColor(Color.parseColor("#808080")); // Default color
+                timerBottomLayout.setBackgroundColor(Color.parseColor("#7FA158")); // Active color
+            }
+        } else if (view.getId() == R.id.timerBottomLayout) {
+            if (!runningTop) {
+                runningTop = true;
+                runningBottom = false;
+                moveCountBottom++;
+                movesTextViewBottom.setText("Moves: " + moveCountBottom);
+
+                timerBottomLayout.setBackgroundColor(Color.parseColor("#808080"));
+                timerTopLayout.setBackgroundColor(Color.parseColor("#7FA158"));
+            }
+        }
+    }
+    private void setGameplayRippleEffect(boolean isGameStarted) {
+        if (isGameStarted) {
+            // Apply custom ripple effect during gameplay
+            timerTopLayout.setForeground(ContextCompat.getDrawable(this, R.drawable.ripple_touch_effect));
+            timerBottomLayout.setForeground(ContextCompat.getDrawable(this, R.drawable.ripple_touch_effect));
+        } else {
+            // Apply default system ripple effect when game is not in progress
+            TypedValue outValue = new TypedValue();
+            getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+            timerTopLayout.setForeground(AppCompatResources.getDrawable(this, outValue.resourceId));
+            timerBottomLayout.setForeground(AppCompatResources.getDrawable(this, outValue.resourceId));
+        }
+    }
+    public void resetTimers(View view) {
+        new AlertDialog.Builder(this)
+                .setTitle("Reset Timers")
+                .setMessage("Are you sure you want to reset the timers?")
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        secondsTop = 600;
+                        secondsBottom = 600;
+                        moveCountTop = 0;
+                        moveCountBottom = 0;
+
+                        updateTimerDisplay(timerTop, secondsTop);
+                        updateTimerDisplay(timerBottom, secondsBottom);
+                        movesTextViewTop.setText("Moves: " + moveCountTop);
+                        movesTextViewBottom.setText("Moves: " + moveCountBottom);
+
+                        runningTop = false;
+                        runningBottom = false;
+                        timerTopLayout.setBackgroundColor(Color.parseColor("#808080"));
+                        timerBottomLayout.setBackgroundColor(Color.parseColor("#808080"));
+                        gameStarted = false;
+
+                        timerTopLayout.setEnabled(true);
+                        timerBottomLayout.setEnabled(true);
+                        gameStarted = false;
+                        setGameplayRippleEffect(false); // Disable light ripple effect
+                    }
+                })
+                .setNegativeButton("No", null)
+                .show();
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
+        }
+    }
+}
