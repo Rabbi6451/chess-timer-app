@@ -1,0 +1,79 @@
+package com.example.chesstimer;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Switch;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity2 extends AppCompatActivity {
+    private EditText timeInput;
+    private Button confirmButton, backButton;
+    private Switch soundToggle, fullScreenToggle;
+    private boolean isSoundOn, isFullScreen;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main2);
+
+        // Initialize UI elements
+        timeInput = findViewById(R.id.timeInput);
+        confirmButton = findViewById(R.id.confirmButton);
+        backButton = findViewById(R.id.backButton);
+        soundToggle = findViewById(R.id.soundToggle);
+        fullScreenToggle = findViewById(R.id.fullScreenToggle);
+
+        // Load saved preferences
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        isSoundOn = prefs.getBoolean("sound_state", true);
+        isFullScreen = prefs.getBoolean("full_screen", false);
+
+        soundToggle.setChecked(isSoundOn);
+        fullScreenToggle.setChecked(isFullScreen);
+
+        // Handle back button click
+        backButton.setOnClickListener(v -> finish()); // Simply close MainActivity2
+
+        // Handle confirm button click
+        confirmButton.setOnClickListener(v -> {
+            String timeText = timeInput.getText().toString().trim();
+
+            // Validate input
+            if (timeText.isEmpty()) {
+                timeInput.setError("Please enter a valid time");
+                return;
+            }
+
+            try {
+                int timeInMinutes = Integer.parseInt(timeText);
+                if (timeInMinutes <= 0) {
+                    timeInput.setError("Enter a positive number");
+                    return;
+                }
+
+                int timeInSeconds = timeInMinutes * 60; // Convert to seconds
+
+                // Save preferences
+                SharedPreferences.Editor editor = getSharedPreferences("AppPrefs", MODE_PRIVATE).edit();
+                editor.putInt("selectedTime", timeInSeconds);
+                editor.putBoolean("sound_state", soundToggle.isChecked());
+                editor.putBoolean("full_screen", fullScreenToggle.isChecked());
+                editor.apply();
+
+                // Send data back to MainActivity
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("selectedTime", timeInSeconds);
+                resultIntent.putExtra("sound_state", soundToggle.isChecked());
+                resultIntent.putExtra("full_screen", fullScreenToggle.isChecked());
+
+                setResult(RESULT_OK, resultIntent);
+                finish(); // Close MainActivity2 and return to MainActivity
+            } catch (NumberFormatException e) {
+                timeInput.setError("Invalid input. Enter a number.");
+            }
+        });
+    }
+}
