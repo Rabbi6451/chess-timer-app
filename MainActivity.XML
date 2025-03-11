@@ -1,0 +1,123 @@
+<!-- activity_main.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical"
+    android:background="@android:color/black">
+
+    <!-- Player 1 Timer -->
+    <LinearLayout
+        android:id="@+id/timerTopLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#808080"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:onClick="onTimerClick"
+        android:orientation="vertical">
+
+        <!-- Moves Counter (Above Timer Text) -->
+        <TextView
+            android:id="@+id/movesTextViewTop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:rotation="180"
+            android:text="Moves: 0"
+            android:textSize="24sp" /> <!-- No rotation -->
+
+        <!-- Timer Text (Rotated 180 degrees) -->
+        <TextView
+            android:id="@+id/timerTop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:rotation="180"
+            android:text="10:00"
+            android:textSize="120sp"
+            android:textStyle="bold" /> <!-- Bold text -->
+    </LinearLayout>
+
+    <!-- Buttons and Custom Time Input -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="@android:color/black">
+
+        <!-- Reset Button -->
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="@android:color/holo_blue_dark"
+            android:onClick="resetTimers"
+            android:padding="8dp"
+            android:text="Reset"
+            android:textColor="@android:color/white" />
+
+        <!-- Stop Button -->
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop"
+            android:textSize="18sp"
+            android:padding="10dp"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:textColor="@android:color/white" />
+
+        <!-- Custom Time Input (EditText with curved background) -->
+        <Button
+            android:id="@+id/setTimeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:backgroundTint="@android:color/holo_green_dark"
+            android:insetLeft="0dp"
+            android:padding="8dp"
+            android:text="SetTime"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Player 2 Timer -->
+    <LinearLayout
+        android:id="@+id/timerBottomLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#808080"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:onClick="onTimerClick"
+        android:orientation="vertical">
+
+        <!-- Timer Text -->
+        <TextView
+            android:id="@+id/timerBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:rotation="0"
+            android:text="10:00"
+            android:duplicateParentState="false"
+            android:textSize="120sp"
+            android:textStyle="bold" /> <!-- Bold text -->
+
+        <!-- Moves Counter (Below Timer Text) -->
+        <TextView
+            android:id="@+id/movesTextViewBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:duplicateParentState="false"
+            android:layout_marginTop="8dp"
+            android:text="Moves: 0"
+            android:textSize="24sp" />
+    </LinearLayout>
+</LinearLayout>
